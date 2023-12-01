@@ -266,10 +266,6 @@ class MainWindow(QMainWindow):
         else:
             self.lineedit_2.setEchoMode(QtWidgets.QLineEdit.Password)
 
-    def open_settings(self):
-        dialog = Dialog()
-        dialog.show().exec_()
-
     def line_edit_setup(self):
         if len(self.lineedit_setup.text()) == 8:
             self.pushbutton_setup.setEnabled(True)
@@ -303,6 +299,7 @@ class MainWindow(QMainWindow):
     def open_settings(self):
         msg = QMessageBox()
         msg.setText("Choose th theme")
+        msg.setWindowTitle("Settings")
         msg_no = msg.addButton("Light", msg.NoRole)
         msg_no.clicked.connect(lambda: change_theme('light'))
         msg_yes = msg.addButton("Dark", msg.YesRole)
@@ -311,9 +308,12 @@ class MainWindow(QMainWindow):
         msg.exec_()
 
     def open_about(self):
-        dialog = QDialog(self)
-        dialog.setWindowTitle("About")
-        dialog.exec_()
+        msg = QMessageBox()
+        msg.setText("Program made special for Yandex Lyceum. Made on PyQT5 by Yaroslav Demidov.")
+        msg.setWindowTitle("About")
+        msg_no = msg.addButton("Ok", msg.AcceptRole)
+
+        msg.exec_()
 
     def save_changes(self):
         if self.mode == "add":
