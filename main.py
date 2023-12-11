@@ -1,4 +1,4 @@
-from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtCore import Qt, QRect, QSize
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon
 from PyQt5.QtWidgets import (
     QTableView,
@@ -24,6 +24,20 @@ import sqlite3
 import qdarkstyle
 import hashlib
 import binascii
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+import binascii, os
+import random, string
+import base64
+
+
+THEME = 'light'
+
+try:
+    if open("settings.txt", "r").readlines()[0].rstrip() == "dark":
+        THEME = 'dark'
+except IndexError:
+    pass
 
 
 def change_theme(theme):
@@ -36,23 +50,17 @@ def change_theme(theme):
         f.write(lines[1])
 
 def encrypt_text(text, key):
-    text_bytes = text.encode("utf-8")
-    k = des(key)
-    pad_len = 8 - (len(text_bytes) % 8)
-    padded_text_bytes = text_bytes + bytes([pad_len] * pad_len)
-    cipher_text_bytes = k.encrypt(padded_text_bytes, padmode=PAD_PKCS5)
-    cipher_text_hex = binascii.hexlify(cipher_text_bytes).decode("utf-8")
-    return cipher_text_hex
+    key = key * 2
+    cipher = AES.new(key.encode('utf-8'), AES.MODE_ECB)
+    padded_text = pad(text.encode('utf-8'), AES.block_size)
+    encrypted_text = cipher.encrypt(padded_text)
+    return base64.b64encode(encrypted_text).decode('utf-8')
 
-
-def decrypt_text(cipher_text_hex, key):
-    cipher_text_bytes = binascii.unhexlify(cipher_text_hex.encode("utf-8"))
-    k = des(key)
-    padded_text_bytes = k.decrypt(cipher_text_bytes, padmode=PAD_PKCS5)
-    pad_len = padded_text_bytes[-1]
-    text_bytes = padded_text_bytes[:-pad_len]
-    text = text_bytes.decode("utf-8")
-    return text
+def decrypt_text(encrypted_text, key):
+    key = key * 2
+    cipher = AES.new(key.encode('utf-8'), AES.MODE_ECB)
+    decrypted_text = cipher.decrypt(base64.b64decode(encrypted_text))
+    return unpad(decrypted_text, AES.block_size).decode('utf-8')
 
 
 def update_data(_id, _name, _password, _description, key):
@@ -103,7 +111,7 @@ def delete_data(_id):
     conn.close()
 
 
-def add_data(_id, _name, _password, _description, key):
+def add_data(_id, _name,_description, _password, key):
     conn = sqlite3.connect("database.sqlite")
 
     cursor = conn.cursor()
@@ -124,7 +132,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setGeometry(QRect(0, 0, 800, 550))
-        self.setWindowTitle("MainWindow")
+        self.setWindowTitle("Password manager")
 
         self.central_widget = QWidget(self)
         self.lineedit_setup = QLineEdit(self)
@@ -148,7 +156,8 @@ class MainWindow(QMainWindow):
         self.pushbutton_check.clicked.connect(self.check_password)
 
         if len(open("settings.txt", "r").readlines()) < 2:
-            pass
+            self.lineedit_check.setVisible(False)
+            self.pushbutton_check.setVisible(False)
         else:
             self.lineedit_setup.setVisible(False)
             self.pushbutton_setup.setVisible(False)
@@ -173,11 +182,11 @@ class MainWindow(QMainWindow):
         self.vertical_layout = QVBoxLayout(self.vertical_layout_widget)
 
         self.lineedit = QLineEdit(self.vertical_layout_widget)
-        self.lineedit.setText("Name")
+        self.lineedit.setPlaceholderText("Name")
         self.vertical_layout.addWidget(self.lineedit)
 
         self.lineedit_2 = QLineEdit(self.vertical_layout_widget)
-        self.lineedit_2.setText("Password")
+        self.lineedit_2.setPlaceholderText("Password")
         self.vertical_layout.addWidget(self.lineedit_2)
 
         self.checkbox = QCheckBox(self.vertical_layout_widget)
@@ -186,27 +195,27 @@ class MainWindow(QMainWindow):
         self.vertical_layout.addWidget(self.checkbox)
 
         self.lineedit_3 = QLineEdit(self.vertical_layout_widget)
-        self.lineedit_3.setText("Description")
+        self.lineedit_3.setPlaceholderText("Description")
         self.vertical_layout.addWidget(self.lineedit_3)
 
         self.pushbutton = QPushButton(self.vertical_layout_widget)
-        self.pushbutton.setText("Change Value")
+        self.pushbutton.setText("Add Value")
         self.vertical_layout.addWidget(self.pushbutton)
         self.pushbutton.clicked.connect(self.save_changes)
 
-        self.pushbutton_3 = QPushButton("Add", self.central_widget)
+        self.pushbutton_3 = QPushButton("", self.central_widget)
         self.pushbutton_3.setGeometry(QRect(0, 0, 51, 51))
         self.pushbutton_3.clicked.connect(self.add_key_mode)
 
-        self.pushbutton_4 = QPushButton("Delete", self.central_widget)
+        self.pushbutton_4 = QPushButton("", self.central_widget)
         self.pushbutton_4.setGeometry(QRect(50, 0, 51, 51))
         self.pushbutton_4.clicked.connect(self.delete_key)
 
-        self.pushbutton_5 = QPushButton("Settings", self.central_widget)
+        self.pushbutton_5 = QPushButton("", self.central_widget)
         self.pushbutton_5.setGeometry(QRect(100, 0, 51, 51))
         self.pushbutton_5.clicked.connect(self.open_settings)
 
-        self.pushbutton_6 = QPushButton("About", self.central_widget)
+        self.pushbutton_6 = QPushButton("", self.central_widget)
         self.pushbutton_6.setGeometry(QRect(150, 0, 51, 51))
         self.pushbutton_6.clicked.connect(self.open_about)
 
@@ -226,6 +235,31 @@ class MainWindow(QMainWindow):
         self.listview_3.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.listview_3.doubleClicked.connect(self.list_selected)
 
+        if THEME == 'light':
+            self.pushbutton_3.setIcon(QIcon('img/add.png'))
+            self.pushbutton_3.setIconSize(QSize(50, 50))
+
+            self.pushbutton_4.setIcon(QIcon('img/delete.png'))
+            self.pushbutton_4.setIconSize(QSize(50, 50))
+
+            self.pushbutton_5.setIcon(QIcon('img/gear.png'))
+            self.pushbutton_5.setIconSize(QSize(48, 48))
+
+            self.pushbutton_6.setIcon(QIcon('img/question.png'))
+            self.pushbutton_6.setIconSize(QSize(48, 48))
+        else:
+            self.pushbutton_3.setIcon(QIcon('img/add_dark.png'))
+            self.pushbutton_3.setIconSize(QSize(50, 50))
+
+            self.pushbutton_4.setIcon(QIcon('img/delete_dark.png'))
+            self.pushbutton_4.setIconSize(QSize(50, 50))
+
+            self.pushbutton_5.setIcon(QIcon('img/gear_dark.png'))
+            self.pushbutton_5.setIconSize(QSize(48, 48))
+
+            self.pushbutton_6.setIcon(QIcon('img/question_dark.png'))
+            self.pushbutton_6.setIconSize(QSize(48, 48))
+
         con = sqlite3.connect("database.sqlite")
         cur = con.cursor()
         if cur.execute("SELECT id FROM database").fetchall() != []:
@@ -234,8 +268,11 @@ class MainWindow(QMainWindow):
             for i in range(1, last_id):
                 data = get_data(i)
                 self.listview.addItems([data[1]])
-                self.listview_2.addItems([decrypt_text(data[2], self.setup_password)])
-                self.listview_3.addItems([data[3]])
+                try:
+                    self.listview_3.addItems([decrypt_text(data[2], self.setup_password)])
+                except ValueError:
+                    self.listview_3.addItems([data[2]])
+                self.listview_2.addItems([data[3]])
 
     def check_password(self):
         file = open("settings.txt", "r")
@@ -277,9 +314,10 @@ class MainWindow(QMainWindow):
         pwd = self.lineedit_setup.text()
         hash_object = hashlib.md5(pwd.encode())
         hex_dig = hash_object.hexdigest()
-        file.write(hex_dig)
+        file.write('\n' + hex_dig)
         self.lineedit_setup.setVisible(False)
         self.pushbutton_setup.setVisible(False)
+        self.central_widget.setVisible(True)
 
     def add_key_mode(self):
         self.mode = "add"
@@ -309,73 +347,75 @@ class MainWindow(QMainWindow):
 
     def open_about(self):
         msg = QMessageBox()
-        msg.setText("Program made special for Yandex Lyceum. Made on PyQT5 by Yaroslav Demidov.")
+        msg.setText("""To enter password adding mode press \"Add\" button\n
+To change values double click on the values which you want to edit and then press \"Change value\" button\n
+To delete values double click on the values which you want to delete and then press \"Delete\" button\n
+To open settings press \"Settings\" button\n
+To get help press \"Help\" button\n
+Program made special for Yandex Lyceum\nMade on PyQT5\nYaroslav Demidov""")
         msg.setWindowTitle("About")
         msg_no = msg.addButton("Ok", msg.AcceptRole)
-
         msg.exec_()
 
     def save_changes(self):
-        if self.mode == "add":
-            name = self.lineedit.text()
-            password = self.lineedit_3.text()
-            description = self.lineedit_2.text()
-            con = sqlite3.connect("database.sqlite")
-            cur = con.cursor()
-            if cur.execute("SELECT id FROM database").fetchall() != []:
-                last_id = cur.execute("SELECT id FROM database").fetchall()[-1][0]
-                add_data(last_id + 1, name, password, description, self.setup_password)
-            else:
-                add_data(1, name, password, description, self.setup_password)
-            con.close()
-            self.listview.clear()
-            self.listview_2.clear()
-            self.listview_3.clear()
-            con = sqlite3.connect("database.sqlite")
-            cur = con.cursor()
-            last_id = cur.execute("SELECT id FROM database").fetchall()[-1][0] + 1
-            con.close()
-            for i in range(1, last_id):
-                data = get_data(i)
-                self.listview.addItems([data[1]])
-                self.listview_2.addItems([decrypt_text(data[2], self.setup_password)])
-                self.listview_3.addItems([data[3]])
+        if self.lineedit.text() and self.lineedit_2.text():
+            if self.mode == "add":
+                name = self.lineedit.text()
+                password = self.lineedit_3.text()
+                description = self.lineedit_2.text()
+                con = sqlite3.connect("database.sqlite")
+                cur = con.cursor()
+                if cur.execute("SELECT id FROM database").fetchall() != []:
+                    last_id = cur.execute("SELECT id FROM database").fetchall()[-1][0]
+                    add_data(last_id + 1, name, password, description, self.setup_password)
+                else:
+                    add_data(1, name, password, description, self.setup_password)
+                con.close()
+                self.listview.clear()
+                self.listview_2.clear()
+                self.listview_3.clear()
+                con = sqlite3.connect("database.sqlite")
+                cur = con.cursor()
+                last_id = cur.execute("SELECT id FROM database").fetchall()[-1][0] + 1
+                con.close()
+                for i in range(1, last_id):
+                    data = get_data(i)
+                    self.listview.addItems([data[1]])
+                    self.listview_3.addItems([decrypt_text(data[2], self.setup_password)])
+                    self.listview_2.addItems([data[3]])
 
-        elif self.mode == "change":
-            id_select = -1
-            name = self.lineedit.text()
-            password = self.lineedit_3.text()
-            description = self.lineedit_2.text()
-            con = sqlite3.connect("database.sqlite")
-            cur = con.cursor()
-            id_select = self.listview.currentRow()
-            if id_select == -1:
-                id_select = self.listview_2.currentRow()
+            elif self.mode == "change":
+                id_select = -1
+                name = self.lineedit.text()
+                password = self.lineedit_3.text()
+                description = self.lineedit_2.text()
+                con = sqlite3.connect("database.sqlite")
+                cur = con.cursor()
+                id_select = self.listview.currentRow()
                 if id_select == -1:
-                    id_select = self.listview_3.currentRow()
-            update_data(id_select + 1, name, password, description, self.setup_password)
-            con.close()
-            self.listview.clear()
-            self.listview_2.clear()
-            self.listview_3.clear()
-            con = sqlite3.connect("database.sqlite")
-            cur = con.cursor()
-            last_id = cur.execute("SELECT id FROM database").fetchall()[-1][0] + 1
-            con.close()
-            for i in range(1, last_id):
-                data = get_data(i)
-                self.listview.addItems([data[1]])
-                self.listview_2.addItems([decrypt_text(data[2], self.setup_password)])
-                self.listview_3.addItems([data[3]])
+                    id_select = self.listview_2.currentRow()
+                    if id_select == -1:
+                        id_select = self.listview_3.currentRow()
+                update_data(id_select + 1, name, password, description, self.setup_password)
+                con.close()
+                self.listview.clear()
+                self.listview_2.clear()
+                self.listview_3.clear()
+                con = sqlite3.connect("database.sqlite")
+                cur = con.cursor()
+                last_id = cur.execute("SELECT id FROM database").fetchall()[-1][0] + 1
+                con.close()
+                for i in range(1, last_id):
+                    data = get_data(i)
+                    self.listview.addItems([data[1]])
+                    self.listview_2.addItems([decrypt_text(data[2], self.setup_password)])
+                    self.listview_3.addItems([data[3]])
 
 
 if __name__ == "__main__":
     app = QApplication([])
-    try:
-        if open("settings.txt", "r").readlines()[0].rstrip() == "dark":
-            app.setStyleSheet(qdarkstyle.load_stylesheet())
-    except IndexError:
-        pass
+    if THEME == 'dark':
+        app.setStyleSheet(qdarkstyle.load_stylesheet())
     window = MainWindow()
     window.show()
     app.exec_()
