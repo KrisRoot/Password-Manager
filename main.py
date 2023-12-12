@@ -1,33 +1,24 @@
-from PyQt5.QtCore import Qt, QRect, QSize
-from PyQt5.QtGui import QStandardItemModel, QStandardItem, QIcon
+from PyQt5.QtCore import QRect, QSize
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
-    QTableView,
     QApplication,
     QMainWindow,
     QAbstractItemView,
-    QDialog,
     QListWidget,
     QWidget,
     QVBoxLayout,
-    QHBoxLayout,
-    QGridLayout,
     QLabel,
     QLineEdit,
     QCheckBox,
     QPushButton,
-    QListView,
     QMessageBox,
 )
-from PyQt5 import QtCore, QtGui, QtWidgets
-from pyDes import *
+from PyQt5 import QtWidgets
 import sqlite3
 import qdarkstyle
 import hashlib
-import binascii
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
-import binascii, os
-import random, string
 import base64
 
 
@@ -49,12 +40,14 @@ def change_theme(theme):
         f.write(theme + '\n')
         f.write(lines[1])
 
+
 def encrypt_text(text, key):
     key = key * 2
     cipher = AES.new(key.encode('utf-8'), AES.MODE_ECB)
     padded_text = pad(text.encode('utf-8'), AES.block_size)
     encrypted_text = cipher.encrypt(padded_text)
     return base64.b64encode(encrypted_text).decode('utf-8')
+
 
 def decrypt_text(encrypted_text, key):
     key = key * 2
@@ -87,10 +80,10 @@ def get_data(_id):
     sql_query = f"SELECT * FROM database WHERE id = {_id};"
     cursor.execute(sql_query)
     results = cursor.fetchall()
-    return results[0]
 
     cursor.close()
     conn.close()
+    return results[0]
 
 
 def delete_data(_id):
@@ -352,7 +345,7 @@ To change values double click on the values which you want to edit and then pres
 To delete values double click on the values which you want to delete and then press \"Delete\" button\n
 To open settings press \"Settings\" button\n
 To get help press \"Help\" button\n
-Program made special for Yandex Lyceum\nMade on PyQT5\nYaroslav Demidov""")
+Program made special for Corporation of evil\nMade on PyQT5\nSomeOne""")
         msg.setWindowTitle("About")
         msg_no = msg.addButton("Ok", msg.AcceptRole)
         msg.exec_()
