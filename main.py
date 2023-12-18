@@ -357,6 +357,10 @@ class MainWindow(QMainWindow):
         self.lineedit_2.setText(self.listview_3.item(id_select).text())
         self.lineedit_3.setText(self.listview_2.item(id_select).text())
 
+        self.listview.clearSelection()
+        self.listview_2.clearSelection()
+        self.listview_3.clearSelection()
+
     def open_settings(self):
         msg = QMessageBox()
         msg.setText("Choose th theme")
@@ -370,12 +374,14 @@ class MainWindow(QMainWindow):
 
     def open_about(self):
         msg = QMessageBox()
-        msg.setText("""To enter password adding mode press \"Add\" button\n
-To change values double click on the values which you want to edit and then press \"Change value\" button\n
-To delete values double click on the values which you want to delete and then press \"Delete\" button\n
-To open settings press \"Settings\" button\n
-To get help press \"Help\" button\n
-Program made special for Yandex Lyceum\nMade on PyQT5\nYaroslav Demidov""")
+        msg.setText("To enter password adding mode press \"Add\" button\n\n" +
+                    "To change values double click on the values which you" +
+                    "want to edit and then press \"Change value\" button\n\n" +
+                    "To delete values double click on the values which you want" +
+                    "to delete and then press \"Delete\" button\n\n" +
+                    "To open settings press \"Settings\" button\n\n" +
+                    "To get help press \"Help\" button\n\n" +
+                    "Program made special for Yandex Lyceum\nMade on PyQT5\nYaroslav Demidov")
         msg.setWindowTitle("About")
         msg_no = msg.addButton("Ok", msg.AcceptRole)
         msg.exec_()
