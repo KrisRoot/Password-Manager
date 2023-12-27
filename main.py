@@ -39,12 +39,100 @@ except IndexError:
     pass
 
 
+def change_theme(theme):
+    with open('settings.txt', 'r+') as f:
+        lines = f.readlines()
+        f.close()
+
+    with open('settings.txt', 'w+') as f:
+        f.write(theme + '\n')
+        f.write(lines[1])
+
+def encrypt_text(text, key):
+    key = key * 2
+    cipher = AES.new(key.encode('utf-8'), AES.MODE_ECB)
+    padded_text = pad(text.encode('utf-8'), AES.block_size)
+    encrypted_text = cipher.encrypt(padded_text)
+    return base64.b64encode(encrypted_text).decode('utf-8')
+
+def decrypt_text(encrypted_text, key):
+    key = key * 2
+    cipher = AES.new(key.encode('utf-8'), AES.MODE_ECB)
+    decrypted_text = cipher.decrypt(base64.b64decode(encrypted_text))
+    return unpad(decrypted_text, AES.block_size).decode('utf-8')
+
+
+def update_data(_id, _name, _password, _description, key):
+    conn = sqlite3.connect("database.sqlite")
+
+    cursor = conn.cursor()
+    ciphered_pwd = encrypt_text(_password, key)
+
+    cursor.execute(
+        "UPDATE database SET name = ?, password = ?, description = ? WHERE id = ?",
+        (_name, ciphered_pwd, _description, _id),
+    )
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+
+def get_data(_id):
+    conn = sqlite3.connect("database.sqlite")
+
+    cursor = conn.cursor()
+
+    sql_query = f"SELECT * FROM database WHERE id = {_id};"
+    cursor.execute(sql_query)
+    results = cursor.fetchall()
+    return results[0]
+
+    cursor.close()
+    conn.close()
+
+
+def delete_data(_id):
+    conn = sqlite3.connect("database.sqlite")
+
+    cursor = conn.cursor()
+
+    sql_query = f"delete from database where id = {_id};"
+    cursor.execute(sql_query)
+    cursor.execute("SELECT * FROM database")
+    rows = cursor.fetchall()
+
+    for i, row in enumerate(rows):
+        cursor.execute("UPDATE database SET id=? WHERE id=?", (i, row[0]))
+
+    cursor.close()
+    conn.commit()
+    conn.close()
+
+
+def add_data(_id, _name,_description, _password, key):
+    conn = sqlite3.connect("database.sqlite")
+
+    cursor = conn.cursor()
+
+    ciphered_pwd = encrypt_text(_password, key)
+
+    sql_insert_query = f"""INSERT OR IGNORE INTO database (id, name, password, description) VALUES 
+                        ({_id}, '{_name}', '{ciphered_pwd}', '{_description}')"""
+    cursor.execute(sql_insert_query)
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
         self.setGeometry(QRect(0, 0, 800, 550))
         self.setWindowTitle("Password manager")
+        self.setFixedSize(800, 500)
 
         self.central_widget = QWidget(self)
         self.lineedit_setup = QLineEdit(self)
@@ -351,93 +439,6 @@ class MainWindow(QMainWindow):
                     self.listview.addItems([data[1]])
                     self.listview_3.addItems([decrypt_text(data[2], self.setup_password)])
                     self.listview_2.addItems([data[3]])
-
-
-def change_theme(theme):
-    with open('settings.txt', 'r+') as f:
-        lines = f.readlines()
-        f.close()
-
-    with open('settings.txt', 'w+') as f:
-        f.write(theme + '\n')
-        f.write(lines[1])
-
-def encrypt_text(text, key):
-    key = key * 2
-    cipher = AES.new(key.encode('utf-8'), AES.MODE_ECB)
-    padded_text = pad(text.encode('utf-8'), AES.block_size)
-    encrypted_text = cipher.encrypt(padded_text)
-    return base64.b64encode(encrypted_text).decode('utf-8')
-
-def decrypt_text(encrypted_text, key):
-    key = key * 2
-    cipher = AES.new(key.encode('utf-8'), AES.MODE_ECB)
-    decrypted_text = cipher.decrypt(base64.b64decode(encrypted_text))
-    return unpad(decrypted_text, AES.block_size).decode('utf-8')
-
-
-def update_data(_id, _name, _password, _description, key):
-    conn = sqlite3.connect("database.sqlite")
-
-    cursor = conn.cursor()
-    ciphered_pwd = encrypt_text(_password, key)
-
-    cursor.execute(
-        "UPDATE database SET name = ?, password = ?, description = ? WHERE id = ?",
-        (_name, ciphered_pwd, _description, _id),
-    )
-    conn.commit()
-
-    cursor.close()
-    conn.close()
-
-
-def get_data(_id):
-    conn = sqlite3.connect("database.sqlite")
-
-    cursor = conn.cursor()
-
-    sql_query = f"SELECT * FROM database WHERE id = {_id};"
-    cursor.execute(sql_query)
-    results = cursor.fetchall()
-    return results[0]
-
-    cursor.close()
-    conn.close()
-
-
-def delete_data(_id):
-    conn = sqlite3.connect("database.sqlite")
-
-    cursor = conn.cursor()
-
-    sql_query = f"delete from database where id = {_id};"
-    cursor.execute(sql_query)
-    cursor.execute("SELECT * FROM database")
-    rows = cursor.fetchall()
-
-    for i, row in enumerate(rows):
-        cursor.execute("UPDATE database SET id=? WHERE id=?", (i, row[0]))
-
-    cursor.close()
-    conn.commit()
-    conn.close()
-
-
-def add_data(_id, _name,_description, _password, key):
-    conn = sqlite3.connect("database.sqlite")
-
-    cursor = conn.cursor()
-
-    ciphered_pwd = encrypt_text(_password, key)
-
-    sql_insert_query = f"""INSERT OR IGNORE INTO database (id, name, password, description) VALUES 
-                        ({_id}, '{_name}', '{ciphered_pwd}', '{_description}')"""
-    cursor.execute(sql_insert_query)
-    conn.commit()
-
-    cursor.close()
-    conn.close()
 
 
 if __name__ == "__main__":
