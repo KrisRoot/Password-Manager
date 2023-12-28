@@ -46,7 +46,7 @@ def change_theme(theme):
 
     with open('settings.txt', 'w+') as f:
         f.write(theme + '\n')
-        f.write(lines[1])
+        f.write(lines[1].lstrip())
 
 def encrypt_text(text, key):
     key = key * 2
