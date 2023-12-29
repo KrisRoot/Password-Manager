@@ -32,12 +32,6 @@ import base64
 
 THEME = 'light'
 
-try:
-    if open("settings.txt", "r").readlines()[0].rstrip() == "dark":
-        THEME = 'dark'
-except IndexError:
-    pass
-
 
 def change_theme(theme):
     with open('settings.txt', 'r+') as f:
@@ -48,12 +42,14 @@ def change_theme(theme):
         f.write(theme + '\n')
         f.write(lines[1].lstrip())
 
+
 def encrypt_text(text, key):
     key = key * 2
     cipher = AES.new(key.encode('utf-8'), AES.MODE_ECB)
     padded_text = pad(text.encode('utf-8'), AES.block_size)
     encrypted_text = cipher.encrypt(padded_text)
     return base64.b64encode(encrypted_text).decode('utf-8')
+
 
 def decrypt_text(encrypted_text, key):
     key = key * 2
@@ -199,7 +195,7 @@ class MainWindow(QMainWindow):
         self.vertical_layout.addWidget(self.lineedit_3)
 
         self.pushbutton = QPushButton(self.vertical_layout_widget)
-        self.pushbutton.setText("Add Value")
+        self.pushbutton.setText("Add Key")
         self.vertical_layout.addWidget(self.pushbutton)
         self.pushbutton.clicked.connect(self.save_changes)
 
@@ -421,10 +417,12 @@ class MainWindow(QMainWindow):
                 con = sqlite3.connect("database.sqlite")
                 cur = con.cursor()
                 id_select = self.listview.currentRow()
+
                 if id_select == -1:
                     id_select = self.listview_2.currentRow()
                     if id_select == -1:
                         id_select = self.listview_3.currentRow()
+
                 update_data(id_select + 1, name, password, description, self.setup_password)
                 con.close()
                 self.listview.clear()
@@ -434,6 +432,7 @@ class MainWindow(QMainWindow):
                 cur = con.cursor()
                 last_id = cur.execute("SELECT id FROM database").fetchall()[-1][0] + 1
                 con.close()
+
                 for i in range(1, last_id):
                     data = get_data(i)
                     self.listview.addItems([data[1]])
@@ -442,6 +441,11 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    try:
+        if open("settings.txt", "r").readlines()[0].rstrip() == "dark":
+            THEME = 'dark'
+    except IndexError:
+        pass
     app = QApplication([])
     if THEME == 'dark':
         app.setStyleSheet(qdarkstyle.load_stylesheet())
